@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/melni/OneDrive/Documents/Нафта/js unik",
-      "program": "c:/Users/melni/OneDrive/Documents/Нафта/js unik/build/Debug/outDebug",
+      "cwd": "c:/Users/melni/OneDrive/Documents/Нафта/Kursova",
+      "program": "c:/Users/melni/OneDrive/Documents/Нафта/Kursova/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

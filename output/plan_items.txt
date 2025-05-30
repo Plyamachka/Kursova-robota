@@ -1,0 +1,5 @@
+id,disciplineId,groupId,course,semester,hours,lessonType,controlType
+1,1,101,1,1,60,Lecture,Exam
+2,2,101,1,2,60,Seminar,Credit
+3,1,102,2,3,60,Lecture,Exam
+4,3,103,1,1,60,Lab,Credit

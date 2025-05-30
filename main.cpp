@@ -134,7 +134,7 @@ case 1: {
                     int hasChildren;
                     std::cout << "Чи є діти? (1 - так, 0 - ні): ";
                     if (!(std::cin >> hasChildren)) hasChildren = 0;
-                    auto students = db.queryStudents({}, {}, 0, "", 0, 0, 0, hasChildren == 1, false, 0, 0);
+                    auto students = db.queryStudents({}, {}, 0, "", 0, 0, 0, true, false, 0, 0);
                     std::cout << "Знайдено студентів: " << students.size() << std::endl;
                     for (const auto& s : students) std::cout << s.getName() << "\n";
                     break;
@@ -158,8 +158,8 @@ case 1: {
                 default:
                     std::cout << "Невірний вибір!\n";
                 }
-            } while (subChoice != 0);
-            break;
+                    } while (subChoice != 0);
+                        break;
         }
 case 2: {
     int subChoice;
@@ -241,13 +241,31 @@ case 2: {
             std::cin >> minChildren;
             std::cout << "Максимум дітей (0 - пропустити): ";
             std::cin >> maxChildren;
+
+            auto teachers = db.queryTeachers(
+                departmentIds, facultyId, categories, gender, birthYear,
+                minAge, maxAge, hasChildren, minChildren, maxChildren,
+                minSalary, maxSalary, isPhdStudent, hasPhd, hasDoctor
+            );
+            std::cout << "Знайдено викладачів: " << teachers.size() << std::endl;
+            for (const auto& t : teachers)
+                std::cout << t.getName() << " (кількість дітей - " << t.getChildrenCount() << ")" << std::endl;
             break;
-        }
+        } 
         case 8: {
             std::cout << "Мінімальна зарплата (0 - пропустити): ";
             std::cin >> minSalary;
             std::cout << "Максимальна зарплата (0 - пропустити): ";
             std::cin >> maxSalary;
+
+            auto teachers = db.queryTeachers(
+                departmentIds, facultyId, categories, gender, birthYear,
+                minAge, maxAge, hasChildren, minChildren, maxChildren,
+                minSalary, maxSalary, isPhdStudent, hasPhd, hasDoctor
+            );
+            std::cout << "Знайдено викладачів: " << teachers.size() << std::endl;
+            for (const auto& t : teachers)
+                std::cout << t.getName() << " (зп - " << t.getSalary() << ")" << std::endl;
             break;
         }
         case 9: {

@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <ctime>
 
 void Database::loadFromFiles(const std::string& path) {
     loadStudents(path + "output/students.txt");
@@ -20,7 +21,7 @@ void Database::loadStudents(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) throw std::runtime_error("Не вдалося відкрити файл: " + filename);
     std::string line;
-    std::getline(file, line); // пропускаємо заголовок
+    std::getline(file, line);
     while (std::getline(file, line)) {
         std::stringstream ss(line);
         std::string idStr, name, groupIdStr, birthYearStr, gender, hasChildrenStr, scholarshipStr;
@@ -36,11 +37,11 @@ void Database::loadStudents(const std::string& filename) {
             int id = std::stoi(idStr);
             int groupId = std::stoi(groupIdStr);
             int birthYear = std::stoi(birthYearStr);
-            bool hasChildren = (hasChildrenStr == "1");
+            bool hasChildren = (std::stoi(hasChildrenStr) == 1);
             double scholarship = std::stod(scholarshipStr);
-            students.emplace_back(id, name, groupId, birthYear, gender, hasChildren, scholarship); // ДОДАЙ ЦЕЙ РЯДОК!
+            students.emplace_back(id, name, groupId, birthYear, gender, hasChildren, scholarship);
         } catch (const std::exception& e) {
-            // Можна додати логування помилки
+            std::cerr << "Помилка при зчитуванні студента: " << e.what() << std::endl;
         }
     }
     file.close();
@@ -302,18 +303,19 @@ std::vector<Student> Database::queryStudents(
     double maxScholarship
 ) const {
     std::vector<Student> result;
+    time_t t = time(nullptr);
+    tm* now = localtime(&t);
+    int currentYear = now->tm_year + 1900;
+
     for (const auto& s : students) {
         if (!groupIds.empty() && std::find(groupIds.begin(), groupIds.end(), s.getGroupId()) == groupIds.end()) continue;
-        // ...інші фільтри...
+        if (!gender.empty() && s.getGender() != gender) continue;
+        if (birthYear > 0 && s.getBirthYear() != birthYear) continue;
+        int age = currentYear - s.getBirthYear();
+        if (minAge > 0 && age < minAge) continue;
+        if (maxAge > 0 && age > maxAge) continue;
         if (hasChildren && !s.getHasChildren()) continue;
-        if (hasScholarship) {
-            if (s.getScholarship() <= 0) continue;
-        } else {
-            // Додаємо фільтрацію для "немає стипендії"
-            if (minScholarship == 0 && maxScholarship == 0) {
-                if (s.getScholarship() > 0) continue;
-            }
-        }
+        if (hasScholarship && s.getScholarship() <= 0) continue;
         if (minScholarship > 0 && s.getScholarship() < minScholarship) continue;
         if (maxScholarship > 0 && s.getScholarship() > maxScholarship) continue;
         result.push_back(s);
@@ -339,30 +341,28 @@ std::vector<Teacher> Database::queryTeachers(
     bool hasDoctor
 ) const {
     std::vector<Teacher> result;
-    for (const auto& t : teachers) {
-        if (!departmentIds.empty() && std::find(departmentIds.begin(), departmentIds.end(), t.getDepartmentId()) == departmentIds.end()) continue;
-        if (facultyId > 0) {
-            bool found = false;
-            for (const auto& d : departments) {
-                if (d.getId() == t.getDepartmentId() && d.getFacultyId() == facultyId) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) continue;
-        }
-        if (!categories.empty() && std::find(categories.begin(), categories.end(), t.getCategory()) == categories.end()) continue;
-        if (!gender.empty() && t.getGender() != gender) continue;
-        if (birthYear > 0 && t.getBirthYear() != birthYear) continue;
-        if (hasChildren && t.getChildrenCount() == 0) continue;
-        if (minChildren > 0 && t.getChildrenCount() < minChildren) continue;
-        if (maxChildren > 0 && t.getChildrenCount() > maxChildren) continue;
-        if (minSalary > 0 && t.getSalary() < minSalary) continue;
-        if (maxSalary > 0 && t.getSalary() > maxSalary) continue;
-        if (isPhdStudent && !t.getIsPhdStudent()) continue;
-        if (hasPhd && !t.getHasPhd()) continue;
-        if (hasDoctor && !t.getHasDoctor()) continue;
-        result.push_back(t);
+    time_t t = time(nullptr);
+    tm* now = localtime(&t);
+    int currentYear = now->tm_year + 1900;
+
+    for (const auto& tchr : teachers) {
+        if (!departmentIds.empty() && std::find(departmentIds.begin(), departmentIds.end(), tchr.getDepartmentId()) == departmentIds.end()) continue;
+        if (facultyId > 0) { /* ... */ }
+        if (!categories.empty() && std::find(categories.begin(), categories.end(), tchr.getCategory()) == categories.end()) continue;
+        if (!gender.empty() && tchr.getGender() != gender) continue;
+        if (birthYear > 0 && tchr.getBirthYear() != birthYear) continue;
+        int age = currentYear - tchr.getBirthYear();
+        if (minAge > 0 && age < minAge) continue;
+        if (maxAge > 0 && age > maxAge) continue;
+        if (hasChildren && tchr.getChildrenCount() == 0) continue;
+        if (minChildren > 0 && tchr.getChildrenCount() < minChildren) continue;
+        if (maxChildren > 0 && tchr.getChildrenCount() > maxChildren) continue;
+        if (minSalary > 0 && tchr.getSalary() < minSalary) continue;
+        if (maxSalary > 0 && tchr.getSalary() > maxSalary) continue;
+        if (isPhdStudent && !tchr.getIsPhdStudent()) continue;
+        if (hasPhd && !tchr.getHasPhd()) continue;
+        if (hasDoctor && !tchr.getHasDoctor()) continue;
+        result.push_back(tchr);
     }
     return result;
 }
