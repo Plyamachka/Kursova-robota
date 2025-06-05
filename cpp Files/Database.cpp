@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <ctime>
+#include <set>
 
 void Database::loadFromFiles(const std::string& path) {
     loadStudents(path + "output/students.txt");
@@ -169,13 +170,15 @@ void Database::loadDisciplines(const std::string& filename) {
     std::getline(file, line);
     while (std::getline(file, line)) {
         std::stringstream ss(line);
-        std::string idStr, name;
+        std::string idStr, name, departmentIdStr;
         std::getline(ss, idStr, ',');
         std::getline(ss, name, ',');
+        std::getline(ss, departmentIdStr, ','); 
 
         try {
             int id = std::stoi(idStr);
-            disciplines.emplace_back(id, name);
+            int departmentId = std::stoi(departmentIdStr); 
+            disciplines.emplace_back(id, name, departmentId);
         } catch (const std::exception& e) {
             std::cerr << "Помилка при зчитуванні дисципліни: " << e.what() << std::endl;
         }
@@ -391,13 +394,31 @@ std::vector<Department> Database::queryDepartmentsForGroupCourseFacultySemester(
     int semester
 ) const {
     std::vector<Department> result;
+    std::set<int> addedIds;
+
     for (const auto& plan : planItems) {
         if ((groupId == 0 || plan.getGroupId() == groupId) &&
             (course == 0 || plan.getCourse() == course) &&
             (semester == 0 || plan.getSemester() == semester)) {
-            for (const auto& d : departments) {
-                if (facultyId == 0 || d.getFacultyId() == facultyId) {
-                    result.push_back(d);
+            int disciplineId = plan.getDisciplineId();
+            auto it = std::find_if(disciplines.begin(), disciplines.end(),
+                [disciplineId](const Discipline& d) { return d.getId() == disciplineId; });
+            if (it != disciplines.end()) {
+                int departmentId = 0;
+
+                departmentId = it->getDepartmentId();
+
+                if (facultyId == 0 ||
+                    std::find_if(departments.begin(), departments.end(),
+                        [departmentId, facultyId](const Department& dep) {
+                            return dep.getId() == departmentId && dep.getFacultyId() == facultyId;
+                        }) != departments.end()) {
+                    if (addedIds.insert(departmentId).second) {
+                        auto depIt = std::find_if(departments.begin(), departments.end(),
+                            [departmentId](const Department& d) { return d.getId() == departmentId; });
+                        if (depIt != departments.end())
+                            result.push_back(*depIt);
+                    }
                 }
             }
         }
@@ -412,15 +433,23 @@ std::vector<Teacher> Database::queryTeachersByDisciplineGroupCourseFaculty(
     int facultyId
 ) const {
     std::vector<Teacher> result;
+    std::set<int> addedTeacherIds;
+
     for (const auto& plan : planItems) {
         if ((disciplineId == 0 || plan.getDisciplineId() == disciplineId) &&
             (groupId == 0 || plan.getGroupId() == groupId) &&
             (course == 0 || plan.getCourse() == course)) {
-            for (const auto& t : teachers) {
-                for (const auto& d : departments) {
-                    if (facultyId == 0 || d.getFacultyId() == facultyId) {
-                        if (t.getDepartmentId() == d.getId()) {
-                            result.push_back(t);
+
+            for (const auto& teacher : teachers) {
+                int departmentId = teacher.getDepartmentId();
+                auto depIt = std::find_if(departments.begin(), departments.end(),
+                    [departmentId](const Department& d) { return d.getId() == departmentId; });
+                if (facultyId == 0 || (depIt != departments.end() && depIt->getFacultyId() == facultyId)) {
+                    auto discIt = std::find_if(disciplines.begin(), disciplines.end(),
+                        [disciplineId](const Discipline& d) { return d.getId() == disciplineId; });
+                    if (discIt != disciplines.end() && discIt->getDepartmentId() == teacher.getDepartmentId()) {
+                        if (addedTeacherIds.insert(teacher.getId()).second) {
+                            result.push_back(teacher);
                         }
                     }
                 }
@@ -438,6 +467,8 @@ std::vector<Teacher> Database::queryTeachersByLessonType(
     int semester
 ) const {
     std::vector<Teacher> result;
+    std::set<int> addedTeacherIds;
+
     for (const auto& plan : planItems) {
         if ((lessonType == plan.getLessonType()) &&
             (groupId == 0 || plan.getGroupId() == groupId) &&
@@ -447,7 +478,9 @@ std::vector<Teacher> Database::queryTeachersByLessonType(
                 for (const auto& d : departments) {
                     if (facultyId == 0 || d.getFacultyId() == facultyId) {
                         if (t.getDepartmentId() == d.getId()) {
-                            result.push_back(t);
+                            if (addedTeacherIds.insert(t.getId()).second) {
+                                result.push_back(t);
+                            }
                         }
                     }
                 }
@@ -464,6 +497,8 @@ std::vector<Student> Database::queryStudentsByExam(
     int mark
 ) const {
     std::vector<Student> result;
+    std::set<int> addedStudentIds;
+
     for (const auto& exam : examResults) {
         if ((disciplineId == 0 || exam.getDisciplineId() == disciplineId) &&
             ((controlType == ControlType::Exam && exam.getIsExam()) ||
@@ -472,7 +507,9 @@ std::vector<Student> Database::queryStudentsByExam(
             for (const auto& s : students) {
                 if (s.getId() == exam.getStudentId() &&
                     (groupIds.empty() || std::find(groupIds.begin(), groupIds.end(), s.getGroupId()) != groupIds.end())) {
-                    result.push_back(s);
+                    if (addedStudentIds.insert(s.getId()).second) {
+                        result.push_back(s);
+                    }
                 }
             }
         }
@@ -516,13 +553,22 @@ std::vector<Teacher> Database::queryTeachersTakingExams(
     int semester
 ) const {
     std::vector<Teacher> result;
+    std::set<int> addedTeacherIds;
+
     for (const auto& exam : examResults) {
-        if ((groupIds.empty() || std::find(groupIds.begin(), groupIds.end(), exam.getStudentId()) != groupIds.end()) &&
+        auto studentIt = std::find_if(students.begin(), students.end(),
+            [&exam](const Student& s) { return s.getId() == exam.getStudentId(); });
+        if (studentIt == students.end()) continue;
+        int groupId = studentIt->getGroupId();
+
+        if ((groupIds.empty() || std::find(groupIds.begin(), groupIds.end(), groupId) != groupIds.end()) &&
             (disciplineIds.empty() || std::find(disciplineIds.begin(), disciplineIds.end(), exam.getDisciplineId()) != disciplineIds.end()) &&
             (semester == 0 || exam.getSemester() == semester)) {
             for (const auto& t : teachers) {
                 if (t.getId() == exam.getTeacherId()) {
-                    result.push_back(t);
+                    if (addedTeacherIds.insert(t.getId()).second) {
+                        result.push_back(t);
+                    }
                 }
             }
         }
@@ -540,6 +586,8 @@ std::vector<Student> Database::queryStudentsByTeacherDisciplineMarkSemesterPerio
     int periodEnd
 ) const {
     std::vector<Student> result;
+    std::set<int> addedStudentIds; 
+
     for (const auto& exam : examResults) {
         if ((teacherId == 0 || exam.getTeacherId() == teacherId) &&
             (disciplineIds.empty() || std::find(disciplineIds.begin(), disciplineIds.end(), exam.getDisciplineId()) != disciplineIds.end()) &&
@@ -550,7 +598,9 @@ std::vector<Student> Database::queryStudentsByTeacherDisciplineMarkSemesterPerio
             for (const auto& s : students) {
                 if (s.getId() == exam.getStudentId() &&
                     (groupIds.empty() || std::find(groupIds.begin(), groupIds.end(), s.getGroupId()) != groupIds.end())) {
-                    result.push_back(s);
+                    if (addedStudentIds.insert(s.getId()).second) {
+                        result.push_back(s);
+                    }
                 }
             }
         }

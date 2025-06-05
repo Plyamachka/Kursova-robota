@@ -13,18 +13,30 @@ void printMenu() {
     std::cout << "Запит 1(студенти)\n";
     std::cout << "Запит 2(викладачі)\n";
     std::cout << "Запит 3(Перелік тем дисертацій)\n";
-    std::cout << "4. Перелік кафедр\n";
-    std::cout << "5. Перелік викладачів за дисципліною\n";
-    std::cout << "6. Перелік викладачів за типом занять\n";
-    std::cout << "7. Перелік студентів, які здали іспит/залік\n";
-    std::cout << "8. Перелік студентів, які здали сесію на відмінно/без трійок/без двійок\n";
-    std::cout << "9. Перелік викладачів, які брали іспити (запит 9)\n";
-    std::cout << "10. Перелік студентів за викладачем, дисципліною, оцінкою\n";
-    std::cout << "11. Перелік студентів і тем дипломних робіт\n";
-    std::cout << "12. Перелік керівників дипломних робіт\n";
-    std::cout << "13. Навантаження викладачів\n";
+    std::cout << "Запит 4(Перелік кафедр)\n";
+    std::cout << "Запит 5 (Перелік викладачів за дисципліною)\n";
+    std::cout << "Запит 6 (Перелік викладачів за типом занять\n";
+    std::cout << "Запит 7 (Перелік студентів, які здали іспит/залік)\n";
+    std::cout << "Запит 8 (Перелік студентів, які здали сесію на відмінно/без трійок/без двійок)\n";
+    std::cout << "Запит 9 (Перелік викладачів, які брали іспити)\n";
+    std::cout << "Запит 10 (Перелік студентів за викладачем, дисципліною, оцінкою)\n";
+    std::cout << "Запит 11 (Перелік студентів та тем дипломних робіт)\n";
+    std::cout << "Запит 12 (Перелік керівників дипломних робіт)\n";
+    std::cout << "Запит 13 (Навантаження викладачів)\n";
     std::cout << "0. Вийти\n";
     std::cout << "Ваш вибір: ";
+}
+
+std::string lessonTypeToString(LessonType type) {
+    switch (type) {
+        case LessonType::Lecture: return "лекція";
+        case LessonType::Seminar: return "практика";
+        case LessonType::Lab: return "лабораторна";
+        case LessonType::Consultation: return "консультація";
+        case LessonType::Coursework: return "курсова";
+        case LessonType::Other: return "інше";
+        default: return "невідомо";
+    }
 }
 
 int main() {
@@ -344,10 +356,8 @@ case 4: {
         std::cout << "0. Назад\n";
         std::cout << "Ваш вибір: ";
         if (!(std::cin >> subChoice)) {
-            std::cout << "Невірний ввід. Будь ласка, введіть число.\n";
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            subChoice = -1;
             continue;
         }
         switch (subChoice) {
@@ -364,7 +374,8 @@ case 4: {
 
             auto deps = db.queryDepartmentsForGroupCourseFacultySemester(groupId, course, facultyId, semester);
             std::cout << "Кафедр: " << deps.size() << std::endl;
-            for (const auto& d : deps) std::cout << d.getName() << "\n";
+            for (const auto& d : deps)
+                std::cout << d.getName() << std::endl;
             break;
         }
         case 0:
@@ -796,7 +807,7 @@ case 13: {
             auto loads = db.queryTeacherLoad(teacherId, 0, semester);
             std::cout << "Навантажень: " << loads.size() << std::endl;
             for (const auto& l : loads) {
-                std::cout << std::get<0>(l) << " - " << std::get<1>(l) << " годин (" << static_cast<int>(std::get<2>(l)) << ")\n";
+            std::cout << std::get<0>(l) << " - " << std::get<1>(l) << " годин (" << lessonTypeToString(std::get<2>(l)) << ")\n";
             }
             break;
         }
@@ -809,7 +820,7 @@ case 13: {
             auto loads = db.queryTeacherLoad(0, departmentId, semester);
             std::cout << "Навантажень: " << loads.size() << std::endl;
             for (const auto& l : loads) {
-                std::cout << std::get<0>(l) << " - " << std::get<1>(l) << " годин (" << static_cast<int>(std::get<2>(l)) << ")\n";
+                std::cout << std::get<0>(l) << " - " << std::get<1>(l) << " годин (" << lessonTypeToString(std::get<2>(l)) << ")\n";
             }
             break;
         }
